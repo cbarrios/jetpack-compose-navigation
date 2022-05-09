@@ -70,60 +70,61 @@ fun RallyApp() {
                 )
             }
         ) { innerPadding ->
-            val accountsName = RallyScreen.Accounts.name
-            NavHost(
+            RallyNavHost(
                 navController = navController,
-                startDestination = RallyScreen.Overview.name,
                 modifier = Modifier.padding(innerPadding)
-            ) {
-                composable(RallyScreen.Overview.name) {
-                    OverviewBody(
-                        onClickSeeAllAccounts = { navController.navigate(RallyScreen.Accounts.name) },
-                        onClickSeeAllBills = { navController.navigate(RallyScreen.Bills.name) },
-                        onAccountClick = { name ->
-                            navigateToSingleAccount(navController, name)
-                        }
-                    )
-                }
-                composable(RallyScreen.Accounts.name) {
-                    AccountsBody(accounts = UserData.accounts) { name ->
-                        navigateToSingleAccount(
-                            navController = navController,
-                            accountName = name
-                        )
-                    }
-                }
-                composable(RallyScreen.Bills.name) {
-                    BillsBody(bills = UserData.bills)
-                }
-                composable(
-                    "$accountsName/{name}",
-                    arguments = listOf(
-                        navArgument("name") {
-                            // Make argument type safe
-                            type = NavType.StringType
-                        }
-                    ),
-                    // Run this command to test the deep link
-                    // adb shell am start -d "rally://accounts/Checking" -a android.intent.action.VIEW
-                    deepLinks = listOf(navDeepLink {
-                        uriPattern = "rally://$accountsName/{name}"
-                    })
-                ) { entry -> // Look up "name" in NavBackStackEntry's arguments
-                    val accountName = entry.arguments?.getString("name")
-                    // Find first name match in UserData
-                    val account = UserData.getAccount(accountName)
-                    // Pass account to SingleAccountBody
-                    SingleAccountBody(account = account)
-                }
-            }
+            )
         }
     }
 }
 
-private fun navigateToSingleAccount(
+@Composable
+fun RallyNavHost(
     navController: NavHostController,
-    accountName: String
+    modifier: Modifier = Modifier
 ) {
-    navController.navigate("${RallyScreen.Accounts.name}/$accountName")
+    NavHost(
+        navController = navController,
+        startDestination = RallyScreen.Overview.name,
+        modifier = modifier
+    ) {
+        val accountsName = RallyScreen.Accounts.name
+        composable(RallyScreen.Overview.name) {
+            OverviewBody(
+                onClickSeeAllAccounts = { navController.navigate(accountsName) },
+                onClickSeeAllBills = { navController.navigate(RallyScreen.Bills.name) },
+                onAccountClick = { name ->
+                    navController.navigate("$accountsName/$name")
+                }
+            )
+        }
+        composable(accountsName) {
+            AccountsBody(accounts = UserData.accounts) { name ->
+                navController.navigate("$accountsName/$name")
+            }
+        }
+        composable(RallyScreen.Bills.name) {
+            BillsBody(bills = UserData.bills)
+        }
+        composable(
+            "$accountsName/{name}",
+            arguments = listOf(
+                navArgument("name") {
+                    // Make argument type safe
+                    type = NavType.StringType
+                }
+            ),
+            // Run this command to test the deep link
+            // adb shell am start -d "rally://accounts/Checking" -a android.intent.action.VIEW
+            deepLinks = listOf(navDeepLink {
+                uriPattern = "rally://$accountsName/{name}"
+            })
+        ) { entry -> // Look up "name" in NavBackStackEntry's arguments
+            val accountName = entry.arguments?.getString("name")
+            // Find first name match in UserData
+            val account = UserData.getAccount(accountName)
+            // Pass account to SingleAccountBody
+            SingleAccountBody(account = account)
+        }
+    }
 }
